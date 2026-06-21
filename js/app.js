@@ -106,6 +106,12 @@
   const horseEmptyEl = document.getElementById("horseEmpty");
   const horseSearch = document.getElementById("horseSearch");
 
+  function formatCost(value) {
+    const n = parseFloat(value);
+    if (isNaN(n)) return "";
+    return n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+  }
+
   function formatDate(iso) {
     if (!iso) return "";
     const [y, m, d] = iso.split("-");
@@ -243,6 +249,7 @@
     if (last) {
       const kleberInfo = visits.find(v => v.kleberDatum);
       lastInfo.innerHTML = `<strong>${formatDate(last.date)}</strong>${last.treatment ? "<br>" + escapeHtml(last.treatment) : ""}` +
+        (last.cost ? `<br><span class="muted small">Kosten: ${formatCost(last.cost)}</span>` : "") +
         (kleberInfo ? `<br><span class="muted small">Klebebeschläge zuletzt: ${formatDate(kleberInfo.kleberDatum)}</span>` : "");
     } else {
       lastInfo.textContent = "Noch kein Termin erfasst.";
@@ -257,7 +264,7 @@
       const btn = document.createElement("button");
       btn.className = "visit-card";
       btn.innerHTML = `
-        <p class="vdate">${formatDate(v.date)}</p>
+        <p class="vdate">${formatDate(v.date)}${v.cost ? ` · ${formatCost(v.cost)}` : ""}</p>
         <p class="vmeta">${escapeHtml(v.treatment || "Keine Angabe zur Behandlung")}</p>
       `;
       btn.addEventListener("click", () => openVisitDetailOrEdit(v.id));
@@ -427,7 +434,14 @@
     document.getElementById("vf-notes").value = visit ? visit.notes || "" : "";
     document.getElementById("vf-nextdate").value = visit ? visit.nextdate || "" : "";
 
-    document.getElementById("vf-kleber-neu").checked = visit ? !!visit.kleberNeu : false;
+    document.getElementById("vf-cost").value = visit ? visit.cost || "" : "";
+
+    const kleberPositionSel = document.getElementById("vf-kleber-position");
+    kleberPositionSel.value = visit ? visit.kleberPosition || "keine" : "keine";
+    document.getElementById("vf-kleber-groesse-vorne").value = visit ? visit.kleberGroesseVorne || "" : "";
+    document.getElementById("vf-kleber-groesse-hinten").value = visit ? visit.kleberGroesseHinten || "" : "";
+    updateKleberGroesseVisibility();
+
     let kleberDatum = visit ? visit.kleberDatum || "" : "";
     if (!kleberDatum) {
       const others = visit ? visits.filter(v => v.id !== visit.id) : visits;
@@ -443,6 +457,13 @@
     navigate("screen-visit-form", { title: visit ? "Termin bearbeiten" : "Neuer Termin", showBack: true });
   }
 
+  function updateKleberGroesseVisibility() {
+    const position = document.getElementById("vf-kleber-position").value;
+    document.getElementById("vf-kleber-groesse-vorne-wrap").hidden = !(position === "vorne" || position === "beide");
+    document.getElementById("vf-kleber-groesse-hinten-wrap").hidden = !(position === "hinten" || position === "beide");
+  }
+  document.getElementById("vf-kleber-position").addEventListener("change", updateKleberGroesseVisibility);
+
   visitForm.addEventListener("submit", e => {
     e.preventDefault();
     const h = getHorse(state.currentHorseId);
@@ -450,16 +471,19 @@
     const date = document.getElementById("vf-date").value;
     if (!date) return;
 
-    const kleberNeu = document.getElementById("vf-kleber-neu").checked;
-    const kleberDatum = kleberNeu ? date : document.getElementById("vf-kleber-datum").value;
+    const kleberPosition = document.getElementById("vf-kleber-position").value;
+    const kleberDatum = kleberPosition !== "keine" ? date : document.getElementById("vf-kleber-datum").value;
 
     const payload = {
       date,
       treatment: document.getElementById("vf-treatment").value.trim(),
       notes: document.getElementById("vf-notes").value.trim(),
       nextdate: document.getElementById("vf-nextdate").value,
+      cost: document.getElementById("vf-cost").value,
       hooves: readHoofGrid(),
-      kleberNeu,
+      kleberPosition,
+      kleberGroesseVorne: document.getElementById("vf-kleber-groesse-vorne").value,
+      kleberGroesseHinten: document.getElementById("vf-kleber-groesse-hinten").value,
       kleberDatum,
     };
 
