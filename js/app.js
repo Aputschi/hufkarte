@@ -241,7 +241,9 @@
     const last = visits[0];
     const lastInfo = document.getElementById("hd-lastVisitInfo");
     if (last) {
-      lastInfo.innerHTML = `<strong>${formatDate(last.date)}</strong>${last.treatment ? "<br>" + escapeHtml(last.treatment) : ""}`;
+      const kleberInfo = visits.find(v => v.kleberDatum);
+      lastInfo.innerHTML = `<strong>${formatDate(last.date)}</strong>${last.treatment ? "<br>" + escapeHtml(last.treatment) : ""}` +
+        (kleberInfo ? `<br><span class="muted small">Klebebeschläge zuletzt: ${formatDate(kleberInfo.kleberDatum)}</span>` : "");
     } else {
       lastInfo.textContent = "Noch kein Termin erfasst.";
     }
@@ -293,10 +295,17 @@
   const visitForm = document.getElementById("visitForm");
   const vfDelete = document.getElementById("vf-delete");
 
+  const QUERBALANCE_OPTIONS = [
+    { value: "", label: "— Querbalance —" },
+    { value: "gut", label: "Gut" },
+    { value: "gleich", label: "Gleich wie zuvor" },
+    { value: "schlecht", label: "Schlecht" },
+  ];
+
   function emptyHooves() {
     const obj = {};
     HOOVES.forEach(hf => {
-      obj[hf.key] = {};
+      obj[hf.key] = { querbalance: "" };
       POSITIONS.forEach(p => { obj[hf.key][p.key] = { anfang: "", ende: "" }; });
     });
     return obj;
@@ -309,6 +318,17 @@
       block.className = "hoof-block";
       block.innerHTML = `<h4>${hf.label}</h4>`;
 
+      const qbRow = document.createElement("div");
+      qbRow.className = "querbalance-row";
+      const currentQb = hooves[hf.key].querbalance || "";
+      qbRow.innerHTML = `
+        <label>Querbalance</label>
+        <select data-hoof-qb="${hf.key}" class="${currentQb ? "qb-" + currentQb : ""}">
+          ${QUERBALANCE_OPTIONS.map(o => `<option value="${o.value}" ${o.value === currentQb ? "selected" : ""}>${o.label}</option>`).join("")}
+        </select>
+      `;
+      block.appendChild(qbRow);
+
       POSITIONS.forEach(p => {
         const val = hooves[hf.key][p.key];
         const prevVal = prevHooves ? prevHooves[hf.key][p.key] : null;
@@ -316,7 +336,7 @@
         if (prevVal && prevVal.ende) {
           const hint = document.createElement("div");
           hint.className = "prev-hint";
-          hint.textContent = `${p.label} – letztes Mal (Ende): ${prevVal.ende} mm`;
+          hint.textContent = `${p.label} – letztes Mal (Ende): ${prevVal.ende}°`;
           block.appendChild(hint);
         }
 
@@ -340,6 +360,12 @@
       inp.addEventListener("input", () => updateDelta(inp, prevHooves));
     });
 
+    hoofGrid.querySelectorAll("select[data-hoof-qb]").forEach(sel => {
+      sel.addEventListener("change", () => {
+        sel.className = sel.value ? "qb-" + sel.value : "";
+      });
+    });
+
     if (prevHooves) {
       hoofGrid.querySelectorAll("input[data-field='anfang']").forEach(inp => updateDelta(inp, prevHooves));
     }
@@ -358,13 +384,13 @@
     }
     const diff = +(curAnfang - prevEnde).toFixed(1);
     if (diff > 0) {
-      deltaEl.textContent = `+${diff} mm`;
+      deltaEl.textContent = `+${diff}°`;
       deltaEl.className = "delta up";
     } else if (diff < 0) {
-      deltaEl.textContent = `${diff} mm`;
+      deltaEl.textContent = `${diff}°`;
       deltaEl.className = "delta down";
     } else {
-      deltaEl.textContent = `±0 mm`;
+      deltaEl.textContent = `±0°`;
       deltaEl.className = "delta same";
     }
   }
@@ -373,6 +399,9 @@
     const hooves = emptyHooves();
     hoofGrid.querySelectorAll("input").forEach(inp => {
       hooves[inp.dataset.hoof][inp.dataset.pos][inp.dataset.field] = inp.value.trim();
+    });
+    hoofGrid.querySelectorAll("select[data-hoof-qb]").forEach(sel => {
+      hooves[sel.dataset.hoofQb].querbalance = sel.value;
     });
     return hooves;
   }
@@ -398,6 +427,15 @@
     document.getElementById("vf-notes").value = visit ? visit.notes || "" : "";
     document.getElementById("vf-nextdate").value = visit ? visit.nextdate || "" : "";
 
+    document.getElementById("vf-kleber-neu").checked = visit ? !!visit.kleberNeu : false;
+    let kleberDatum = visit ? visit.kleberDatum || "" : "";
+    if (!kleberDatum) {
+      const others = visit ? visits.filter(v => v.id !== visit.id) : visits;
+      const lastKnown = others.find(v => v.kleberDatum);
+      kleberDatum = lastKnown ? lastKnown.kleberDatum : "";
+    }
+    document.getElementById("vf-kleber-datum").value = kleberDatum;
+
     buildHoofGrid(visit ? visit.hooves : emptyHooves(), prevVisit ? prevVisit.hooves : null);
 
     vfDelete.hidden = !visit;
@@ -412,12 +450,17 @@
     const date = document.getElementById("vf-date").value;
     if (!date) return;
 
+    const kleberNeu = document.getElementById("vf-kleber-neu").checked;
+    const kleberDatum = kleberNeu ? date : document.getElementById("vf-kleber-datum").value;
+
     const payload = {
       date,
       treatment: document.getElementById("vf-treatment").value.trim(),
       notes: document.getElementById("vf-notes").value.trim(),
       nextdate: document.getElementById("vf-nextdate").value,
       hooves: readHoofGrid(),
+      kleberNeu,
+      kleberDatum,
     };
 
     if (state.currentVisitId) {
