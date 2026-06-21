@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#5b4636">
+<title>Hufkarte</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <header class="topbar">
+    <button id="backBtn" class="icon-btn" hidden>←</button>
+    <h1 id="pageTitle">Hufkarte</h1>
+    <button id="addBtn" class="icon-btn" hidden>+</button>
+  </header>
+
+  <main id="screens">
+
+    <!-- ===================== HORSE LIST ===================== -->
+    <section id="screen-horses" class="screen">
+      <div class="search-bar">
+        <input type="search" id="horseSearch" placeholder="Pferd, Besitzer oder Stall suchen…">
+      </div>
+      <div id="horseList" class="card-list"></div>
+      <div id="horseEmpty" class="empty-state" hidden>
+        <p>Noch keine Pferde angelegt.</p>
+        <p>Tippe auf <strong>+</strong> oben rechts, um dein erstes Pferd anzulegen.</p>
+      </div>
+    </section>
+
+    <!-- ===================== HORSE FORM (add/edit) ===================== -->
+    <section id="screen-horse-form" class="screen">
+      <form id="horseForm" class="form">
+        <label>Name des Pferdes *
+          <input type="text" id="hf-name" required>
+        </label>
+        <label>Rasse / Farbe
+          <input type="text" id="hf-rasse" placeholder="z.B. Welshmix, Marmorschecke">
+        </label>
+        <label>Geschlecht
+          <select id="hf-geschlecht">
+            <option value="">— wählen —</option>
+            <option value="Stute">Stute</option>
+            <option value="Wallach">Wallach</option>
+            <option value="Hengst">Hengst</option>
+          </select>
+        </label>
+        <label>Geburtsjahr
+          <input type="number" id="hf-jahr" min="1980" max="2099" placeholder="z.B. 2002">
+        </label>
+        <label>Besitzer *
+          <input type="text" id="hf-besitzer" required>
+        </label>
+        <label>Stall / Ort
+          <input type="text" id="hf-stall" placeholder="z.B. Reiterhof Müller">
+        </label>
+        <label>Notizen (allgemein, z.B. Besonderheiten)
+          <textarea id="hf-notizen" rows="3"></textarea>
+        </label>
+        <div class="form-actions">
+          <button type="button" id="hf-delete" class="btn btn-danger" hidden>Pferd löschen</button>
+          <button type="submit" class="btn btn-primary">Speichern</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===================== HORSE DETAIL ===================== -->
+    <section id="screen-horse-detail" class="screen">
+      <div class="horse-header card">
+        <div class="horse-header-top">
+          <h2 id="hd-name">—</h2>
+          <button id="hd-editBtn" class="icon-btn">✎</button>
+        </div>
+        <p id="hd-meta" class="muted"></p>
+        <p id="hd-besitzer"></p>
+        <p id="hd-notizen" class="muted"></p>
+      </div>
+
+      <div class="last-visit-summary card" id="hd-lastVisit">
+        <h3>Letzter Termin</h3>
+        <p id="hd-lastVisitInfo" class="muted">Noch kein Termin erfasst.</p>
+      </div>
+
+      <button id="hd-newVisitBtn" class="btn btn-primary btn-full">+ Neuen Termin erfassen</button>
+
+      <h3 class="section-title">Verlauf</h3>
+      <div id="visitList" class="card-list"></div>
+    </section>
+
+    <!-- ===================== VISIT FORM ===================== -->
+    <section id="screen-visit-form" class="screen">
+      <form id="visitForm" class="form">
+        <label>Datum *
+          <input type="date" id="vf-date" required>
+        </label>
+
+        <h3 class="section-title">Maße (mm)</h3>
+        <p class="muted small">Vorheriger Wert wird zum Vergleich angezeigt. Trage einfach den neuen Wert ein.</p>
+
+        <div class="hoof-grid" id="hoofGrid"></div>
+
+        <h3 class="section-title">Was wurde gemacht?</h3>
+        <label>Behandlung / Maßnahmen
+          <textarea id="vf-treatment" rows="3" placeholder="z.B. Ausschneiden, Raspeln, Eisen erneuert…"></textarea>
+        </label>
+        <label>Sonstige Notizen
+          <textarea id="vf-notes" rows="3" placeholder="z.B. Huf-Temperatur fühlen, Silentbel einmassieren…"></textarea>
+        </label>
+        <label>Nächster Termin geplant (optional)
+          <input type="date" id="vf-nextdate">
+        </label>
+
+        <div class="form-actions">
+          <button type="button" id="vf-delete" class="btn btn-danger" hidden>Termin löschen</button>
+          <button type="submit" class="btn btn-primary">Speichern</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===================== SETTINGS / BACKUP ===================== -->
+    <section id="screen-settings" class="screen">
+      <div class="card">
+        <h3>Daten sichern</h3>
+        <p class="muted small">Exportiere regelmäßig ein Backup, z.B. um es per E-Mail/WhatsApp an dich selbst zu schicken oder auf einem neuen Handy einzuspielen.</p>
+        <button id="exportBtn" class="btn btn-primary btn-full">Backup exportieren (Datei speichern)</button>
+      </div>
+      <div class="card">
+        <h3>Daten wiederherstellen</h3>
+        <p class="muted small">Achtung: Das ersetzt alle aktuell gespeicherten Daten auf diesem Gerät.</p>
+        <label class="btn btn-secondary btn-full file-btn">
+          Backup-Datei importieren
+          <input type="file" id="importInput" accept="application/json" hidden>
+        </label>
+      </div>
+      <div class="card">
+        <h3>Über diese App</h3>
+        <p class="muted small">Hufkarte v1.0 — alle Daten werden ausschließlich lokal auf diesem Gerät gespeichert.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn" data-nav="screen-horses">
+      <span class="nav-icon">🐴</span><span>Pferde</span>
+    </button>
+    <button class="nav-btn" data-nav="screen-settings">
+      <span class="nav-icon">⚙️</span><span>Einstellungen</span>
+    </button>
+  </nav>
+
+</div>
+
+<div id="toast"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
