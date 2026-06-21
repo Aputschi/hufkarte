@@ -1,4 +1,4 @@
-const CACHE_NAME = "hufkarte-cache-v2";
+const CACHE_NAME = "hufkarte-cache-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -26,18 +26,17 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
+// Network-first: always try to fetch the latest version first so updates
+// show up immediately when online. Falls back to cache when offline.
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then(resp => {
-          const copy = resp.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-          return resp;
-        })
-        .catch(() => cached);
-    })
+    fetch(event.request)
+      .then(resp => {
+        const copy = resp.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        return resp;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

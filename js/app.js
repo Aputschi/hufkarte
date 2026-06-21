@@ -556,7 +556,18 @@
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      const hadController = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register("sw.js").then(reg => {
+        if (!hadController) return; // first-ever install, nothing to reload
+        reg.addEventListener("updatefound", () => {
+          let reloaded = false;
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (reloaded) return;
+            reloaded = true;
+            location.reload();
+          });
+        });
+      }).catch(() => {});
     });
   }
 })();
