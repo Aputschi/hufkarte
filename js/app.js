@@ -49,9 +49,13 @@
   const addBtn = document.getElementById("addBtn");
   const navBtns = document.querySelectorAll(".nav-btn");
 
-  const navStack = [];
+  // navStack holds the full in-app navigation history (never destructively
+  // popped on back) so that the Android back gesture/button can step through
+  // it via the browser History API instead of closing the app.
+  let navStack = [];
+  let suppressHistory = false;
 
-  function showScreen(id, { title, showBack = false, showAdd = false, onAdd = null, push = true } = {}) {
+  function renderScreen(id, { title, showBack = false, showAdd = false, onAdd = null } = {}) {
     screens.forEach(s => s.classList.toggle("active", s.id === id));
     pageTitle.textContent = title || "Hufkarte";
     backBtn.hidden = !showBack;
@@ -61,18 +65,36 @@
     const topLevelScreens = ["screen-horses", "screen-stats", "screen-settings"];
     const activeTab = topLevelScreens.includes(id) ? id : "screen-horses";
     navBtns.forEach(b => b.classList.toggle("active", b.dataset.nav === activeTab));
-
-    if (push) navStack.push({ id, opts: { title, showBack, showAdd, onAdd, push: false } });
   }
 
+  // Pushes a new screen onto the in-app history (used when drilling deeper,
+  // e.g. horse list -> horse detail -> edit form).
+  function showScreen(id, opts = {}) {
+    navStack.push({ id, opts });
+    if (!suppressHistory) history.pushState({ depth: navStack.length }, "", location.href);
+    renderScreen(id, opts);
+  }
+
+  // Replaces the whole in-app history with a single root screen (used when
+  // switching bottom-nav tabs).
+  function resetToScreen(id, opts = {}) {
+    navStack = [{ id, opts }];
+    if (!suppressHistory) history.pushState({ depth: 1 }, "", location.href);
+    renderScreen(id, opts);
+  }
+
+  window.addEventListener("popstate", () => {
+    if (navStack.length <= 1) return; // nothing left in-app: let the app close/exit normally
+    navStack.pop();
+    const prev = navStack[navStack.length - 1];
+    suppressHistory = true;
+    if (prev.id === "screen-horses") renderHorseList();
+    renderScreen(prev.id, prev.opts);
+    suppressHistory = false;
+  });
+
   backBtn.addEventListener("click", () => {
-    navStack.pop(); // remove current
-    const prev = navStack.pop();
-    if (prev) {
-      navigate(prev.id, prev.opts);
-    } else {
-      navigate("screen-horses");
-    }
+    history.back();
   });
 
   function navigate(id, opts) {
@@ -82,15 +104,14 @@
 
   navBtns.forEach(btn => {
     btn.addEventListener("click", () => {
-      navStack.length = 0;
       if (btn.dataset.nav === "screen-horses") {
         renderHorseList();
-        showScreen("screen-horses", { title: "Meine Pferde", showAdd: true, onAdd: () => openHorseForm(null) });
+        resetToScreen("screen-horses", { title: "Meine Pferde", showAdd: true, onAdd: () => openHorseForm(null) });
       } else if (btn.dataset.nav === "screen-stats") {
         renderStats();
-        showScreen("screen-stats", { title: "Statistik" });
+        resetToScreen("screen-stats", { title: "Statistik" });
       } else {
-        showScreen("screen-settings", { title: "Einstellungen" });
+        resetToScreen("screen-settings", { title: "Einstellungen" });
       }
     });
   });
