@@ -443,11 +443,11 @@
         row.className = "hoof-row";
         row.innerHTML = `
           <label>${p.label}</label>
-          <div style="display:flex; gap:6px;">
+          <div class="hoof-inputs">
             <input type="number" step="0.1" inputmode="decimal" placeholder="Anfang" data-hoof="${hf.key}" data-pos="${p.key}" data-field="anfang" value="${val.anfang}">
             <input type="number" step="0.1" inputmode="decimal" placeholder="Ende" data-hoof="${hf.key}" data-pos="${p.key}" data-field="ende" value="${val.ende}">
+            <span class="delta same" data-delta-for="${hf.key}-${p.key}"></span>
           </div>
-          <span class="delta same" data-delta-for="${hf.key}-${p.key}"></span>
         `;
         block.appendChild(row);
       });
