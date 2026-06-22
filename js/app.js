@@ -58,7 +58,9 @@
     addBtn.hidden = !showAdd;
     addBtn.onclick = onAdd;
 
-    navBtns.forEach(b => b.classList.toggle("active", b.dataset.nav === id || (id !== "screen-horses" && id !== "screen-settings" && b.dataset.nav === "screen-horses")));
+    const topLevelScreens = ["screen-horses", "screen-stats", "screen-settings"];
+    const activeTab = topLevelScreens.includes(id) ? id : "screen-horses";
+    navBtns.forEach(b => b.classList.toggle("active", b.dataset.nav === activeTab));
 
     if (push) navStack.push({ id, opts: { title, showBack, showAdd, onAdd, push: false } });
   }
@@ -84,6 +86,9 @@
       if (btn.dataset.nav === "screen-horses") {
         renderHorseList();
         showScreen("screen-horses", { title: "Meine Pferde", showAdd: true, onAdd: () => openHorseForm(null) });
+      } else if (btn.dataset.nav === "screen-stats") {
+        renderStats();
+        showScreen("screen-stats", { title: "Statistik" });
       } else {
         showScreen("screen-settings", { title: "Einstellungen" });
       }
@@ -155,6 +160,93 @@
     const div = document.createElement("div");
     div.textContent = str ?? "";
     return div.innerHTML;
+  }
+
+  /* ===================== STATISTICS ===================== */
+
+  function renderStats() {
+    const horses = state.data.horses;
+    let visitCount = 0;
+    let revenueTotal = 0;
+    let revenueYear = 0;
+    const currentYear = new Date().getFullYear();
+
+    horses.forEach(h => {
+      h.visits.forEach(v => {
+        visitCount++;
+        const cost = parseFloat(v.cost);
+        if (!isNaN(cost)) {
+          revenueTotal += cost;
+          if (new Date(v.date).getFullYear() === currentYear) revenueYear += cost;
+        }
+      });
+    });
+
+    document.getElementById("st-horseCount").textContent = horses.length;
+    document.getElementById("st-visitCount").textContent = visitCount;
+    document.getElementById("st-revenueTotal").textContent = formatCost(revenueTotal) || "0 €";
+    document.getElementById("st-revenueYear").textContent = formatCost(revenueYear) || "0 €";
+    document.getElementById("st-revenueYearLabel").textContent = `Einnahmen ${currentYear}`;
+
+    // Bald fällig: last visit more than 6 weeks ago
+    const dueListEl = document.getElementById("st-dueList");
+    dueListEl.innerHTML = "";
+    const now = new Date();
+    const dueWeeksThreshold = 6;
+    const dueHorses = horses
+      .map(h => {
+        const last = sortedVisits(h)[0];
+        if (!last) return null;
+        const days = Math.floor((now - new Date(last.date)) / (1000 * 60 * 60 * 24));
+        const weeks = Math.floor(days / 7);
+        return weeks >= dueWeeksThreshold ? { horse: h, weeks, lastDate: last.date } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.weeks - a.weeks);
+
+    if (dueHorses.length === 0) {
+      dueListEl.innerHTML = `<p class="muted small" style="text-align:center;">Aktuell ist kein Pferd überfällig.</p>`;
+    } else {
+      dueHorses.forEach(({ horse, weeks, lastDate }) => {
+        const btn = document.createElement("button");
+        btn.className = "due-card";
+        btn.innerHTML = `
+          <p class="due-name">${escapeHtml(horse.name)}</p>
+          <p class="due-meta">Letzter Termin: ${formatDate(lastDate)} · <span class="due-weeks">${weeks} Wochen her</span></p>
+        `;
+        btn.addEventListener("click", () => openHorseDetail(horse.id));
+        dueListEl.appendChild(btn);
+      });
+    }
+
+    // Anstehende Termine: based on nextdate field, sorted soonest first
+    const upcomingListEl = document.getElementById("st-upcomingList");
+    upcomingListEl.innerHTML = "";
+    const todayIso = now.toISOString().slice(0, 10);
+    const upcoming = [];
+    horses.forEach(h => {
+      h.visits.forEach(v => {
+        if (v.nextdate && v.nextdate >= todayIso) {
+          upcoming.push({ horse: h, date: v.nextdate });
+        }
+      });
+    });
+    upcoming.sort((a, b) => a.date.localeCompare(b.date));
+
+    if (upcoming.length === 0) {
+      upcomingListEl.innerHTML = `<p class="muted small" style="text-align:center;">Keine geplanten Termine erfasst.</p>`;
+    } else {
+      upcoming.forEach(({ horse, date }) => {
+        const btn = document.createElement("button");
+        btn.className = "upcoming-card";
+        btn.innerHTML = `
+          <p class="due-name">${escapeHtml(horse.name)}</p>
+          <p class="due-meta">Geplant für: ${formatDate(date)}</p>
+        `;
+        btn.addEventListener("click", () => openHorseDetail(horse.id));
+        upcomingListEl.appendChild(btn);
+      });
+    }
   }
 
   /* ===================== HORSE FORM ===================== */

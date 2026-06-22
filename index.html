@@ -166,11 +166,43 @@
       </div>
     </section>
 
+    <!-- ===================== STATISTICS ===================== -->
+    <section id="screen-stats" class="screen">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <p class="stat-value" id="st-horseCount">0</p>
+          <p class="stat-label">Pferde</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-value" id="st-visitCount">0</p>
+          <p class="stat-label">Termine gesamt</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-value" id="st-revenueTotal">0 €</p>
+          <p class="stat-label">Einnahmen gesamt</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-value" id="st-revenueYear">0 €</p>
+          <p class="stat-label" id="st-revenueYearLabel">Einnahmen dieses Jahr</p>
+        </div>
+      </div>
+
+      <h3 class="section-title">Bald fällig</h3>
+      <p class="muted small">Pferde, deren letzter Termin mehr als 6 Wochen zurückliegt.</p>
+      <div id="st-dueList" class="card-list"></div>
+
+      <h3 class="section-title">Anstehende Termine</h3>
+      <div id="st-upcomingList" class="card-list"></div>
+    </section>
+
   </main>
 
   <nav class="bottom-nav">
     <button class="nav-btn" data-nav="screen-horses">
       <span class="nav-icon">🐴</span><span>Pferde</span>
+    </button>
+    <button class="nav-btn" data-nav="screen-stats">
+      <span class="nav-icon">📊</span><span>Statistik</span>
     </button>
     <button class="nav-btn" data-nav="screen-settings">
       <span class="nav-icon">⚙️</span><span>Einstellungen</span>
