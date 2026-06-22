@@ -336,32 +336,29 @@ main#screens {
 
 .querbalance-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  padding-bottom: 10px;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
   min-width: 0;
 }
 .querbalance-row label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   font-weight: 600;
-  flex-shrink: 0;
 }
-.querbalance-row select {
-  flex: 1;
+.querbalance-row textarea {
+  width: 100%;
   min-width: 0;
-  padding: 10px 8px;
+  padding: 10px;
   font-size: 15px;
+  font-family: inherit;
   border-radius: 8px;
   border: 1.5px solid var(--border);
   background: #fff;
-  font-weight: 600;
+  resize: vertical;
 }
-.querbalance-row select.qb-gut { color: var(--good); }
-.querbalance-row select.qb-schlecht { color: var(--bad); }
-.querbalance-row select.qb-gleich { color: var(--brown); }
 .delta.up { color: var(--bad); }
 .delta.down { color: var(--good); }
 .delta.same { color: var(--muted); }

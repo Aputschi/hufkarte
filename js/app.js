@@ -415,13 +415,6 @@
   const visitForm = document.getElementById("visitForm");
   const vfDelete = document.getElementById("vf-delete");
 
-  const QUERBALANCE_OPTIONS = [
-    { value: "", label: "— Querbalance —" },
-    { value: "gut", label: "Gut" },
-    { value: "gleich", label: "Gleich wie zuvor" },
-    { value: "schlecht", label: "Schlecht" },
-  ];
-
   function emptyHooves() {
     const obj = {};
     HOOVES.forEach(hf => {
@@ -442,10 +435,8 @@
       qbRow.className = "querbalance-row";
       const currentQb = hooves[hf.key].querbalance || "";
       qbRow.innerHTML = `
-        <label>Querbalance</label>
-        <select data-hoof-qb="${hf.key}" class="${currentQb ? "qb-" + currentQb : ""}">
-          ${QUERBALANCE_OPTIONS.map(o => `<option value="${o.value}" ${o.value === currentQb ? "selected" : ""}>${o.label}</option>`).join("")}
-        </select>
+        <label>Querbalance (Stichpunkte)</label>
+        <textarea rows="2" data-hoof-qb="${hf.key}" placeholder="z.B. gut, leicht schief außen…">${escapeHtml(currentQb)}</textarea>
       `;
       block.appendChild(qbRow);
 
@@ -478,12 +469,6 @@
 
     hoofGrid.querySelectorAll("input").forEach(inp => {
       inp.addEventListener("input", () => updateDelta(inp, prevHooves));
-    });
-
-    hoofGrid.querySelectorAll("select[data-hoof-qb]").forEach(sel => {
-      sel.addEventListener("change", () => {
-        sel.className = sel.value ? "qb-" + sel.value : "";
-      });
     });
 
     if (prevHooves) {
@@ -520,8 +505,8 @@
     hoofGrid.querySelectorAll("input").forEach(inp => {
       hooves[inp.dataset.hoof][inp.dataset.pos][inp.dataset.field] = inp.value.trim();
     });
-    hoofGrid.querySelectorAll("select[data-hoof-qb]").forEach(sel => {
-      hooves[sel.dataset.hoofQb].querbalance = sel.value;
+    hoofGrid.querySelectorAll("textarea[data-hoof-qb]").forEach(ta => {
+      hooves[ta.dataset.hoofQb].querbalance = ta.value.trim();
     });
     return hooves;
   }
