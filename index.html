@@ -105,23 +105,34 @@
 
         <div class="hoof-grid" id="hoofGrid"></div>
 
-        <h3 class="section-title">Klebebeschläge</h3>
-        <label>Heute angebracht
-          <select id="vf-kleber-position">
-            <option value="keine">Keine</option>
-            <option value="vorne">Vorne</option>
-            <option value="hinten">Hinten</option>
-            <option value="beide">Vorne und hinten</option>
+        <h3 class="section-title">Klebebeschläge vorne</h3>
+        <label>Status
+          <select id="vf-kleber-vorne-status">
+            <option value="keine">Keine Klebebeschläge</option>
+            <option value="neu">Neu angebracht</option>
+            <option value="wiederverwendet">Alte wiederverwendet</option>
           </select>
         </label>
-        <label id="vf-kleber-groesse-vorne-wrap" hidden>Größe vorne (mm)
-          <input type="number" step="1" inputmode="numeric" placeholder="z.B. 120" id="vf-kleber-groesse-vorne">
+        <label id="vf-kleber-vorne-groesse-wrap" hidden>Größe (mm)
+          <input type="number" step="1" inputmode="numeric" placeholder="z.B. 120" id="vf-kleber-vorne-groesse">
         </label>
-        <label id="vf-kleber-groesse-hinten-wrap" hidden>Größe hinten (mm)
-          <input type="number" step="1" inputmode="numeric" placeholder="z.B. 130" id="vf-kleber-groesse-hinten">
+        <label id="vf-kleber-vorne-seit-wrap" hidden>Drauf seit
+          <input type="date" id="vf-kleber-vorne-seit">
         </label>
-        <label>Letztes Mal Klebebeschläge angebracht am
-          <input type="date" id="vf-kleber-datum">
+
+        <h3 class="section-title">Klebebeschläge hinten</h3>
+        <label>Status
+          <select id="vf-kleber-hinten-status">
+            <option value="keine">Keine Klebebeschläge</option>
+            <option value="neu">Neu angebracht</option>
+            <option value="wiederverwendet">Alte wiederverwendet</option>
+          </select>
+        </label>
+        <label id="vf-kleber-hinten-groesse-wrap" hidden>Größe (mm)
+          <input type="number" step="1" inputmode="numeric" placeholder="z.B. 130" id="vf-kleber-hinten-groesse">
+        </label>
+        <label id="vf-kleber-hinten-seit-wrap" hidden>Drauf seit
+          <input type="date" id="vf-kleber-hinten-seit">
         </label>
 
         <h3 class="section-title">Was wurde gemacht?</h3>

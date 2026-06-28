@@ -360,10 +360,14 @@
     const last = visits[0];
     const lastInfo = document.getElementById("hd-lastVisitInfo");
     if (last) {
-      const kleberInfo = visits.find(v => v.kleberDatum);
+      const kleberVorne = getLastKnownKleberFoot(visits, "vorne");
+      const kleberHinten = getLastKnownKleberFoot(visits, "hinten");
+      const kleberParts = [];
+      if (kleberVorne.seit) kleberParts.push(`Vorne seit ${formatDate(kleberVorne.seit)}${kleberVorne.groesse ? ` (${kleberVorne.groesse}mm)` : ""}`);
+      if (kleberHinten.seit) kleberParts.push(`Hinten seit ${formatDate(kleberHinten.seit)}${kleberHinten.groesse ? ` (${kleberHinten.groesse}mm)` : ""}`);
       lastInfo.innerHTML = `<strong>${formatDate(last.date)}</strong>${last.treatment ? "<br>" + escapeHtml(last.treatment) : ""}` +
         (last.cost ? `<br><span class="muted small">Kosten: ${formatCost(last.cost)}</span>` : "") +
-        (kleberInfo ? `<br><span class="muted small">Klebebeschläge zuletzt: ${formatDate(kleberInfo.kleberDatum)}</span>` : "");
+        (kleberParts.length ? `<br><span class="muted small">Klebebeschläge: ${kleberParts.join(" · ")}</span>` : "");
     } else {
       lastInfo.textContent = "Noch kein Termin erfasst.";
     }
@@ -472,22 +476,22 @@
     });
 
     if (prevHooves) {
-      hoofGrid.querySelectorAll("input[data-field='anfang']").forEach(inp => updateDelta(inp, prevHooves));
+      hoofGrid.querySelectorAll("input[data-field='ende']").forEach(inp => updateDelta(inp, prevHooves));
     }
   }
 
   function updateDelta(inp, prevHooves) {
     if (!prevHooves) return;
     const hoofKey = inp.dataset.hoof, posKey = inp.dataset.pos, field = inp.dataset.field;
-    if (field !== "anfang") return;
+    if (field !== "ende") return;
     const deltaEl = hoofGrid.querySelector(`[data-delta-for="${hoofKey}-${posKey}"]`);
     const prevEnde = parseFloat(prevHooves[hoofKey][posKey].ende);
-    const curAnfang = parseFloat(inp.value);
-    if (isNaN(prevEnde) || isNaN(curAnfang)) {
+    const curEnde = parseFloat(inp.value);
+    if (isNaN(prevEnde) || isNaN(curEnde)) {
       deltaEl.textContent = "";
       return;
     }
-    const diff = +(curAnfang - prevEnde).toFixed(1);
+    const diff = +(curEnde - prevEnde).toFixed(1);
     if (diff > 0) {
       deltaEl.textContent = `+${diff}°`;
       deltaEl.className = "delta up";
@@ -509,6 +513,70 @@
       hooves[ta.dataset.hoofQb].querbalance = ta.value.trim();
     });
     return hooves;
+  }
+
+  const KLEBER_FEET = ["vorne", "hinten"];
+
+  function capitalize(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  // Reads a foot's glue-shoe status for a visit, falling back to the old
+  // single-field format (kleberPosition/kleberGroesseVorne/...) used before
+  // this per-foot/status redesign, so existing entries keep showing correctly.
+  function getKleberFootData(visit, foot) {
+    if (!visit) return { status: "keine", groesse: "", seit: "" };
+    const statusKey = `kleber${capitalize(foot)}Status`;
+    if (visit[statusKey]) {
+      return {
+        status: visit[statusKey],
+        groesse: visit[`kleber${capitalize(foot)}Groesse`] || "",
+        seit: visit[`kleber${capitalize(foot)}Seit`] || "",
+      };
+    }
+    if (visit.kleberPosition && (visit.kleberPosition === foot || visit.kleberPosition === "beide")) {
+      return {
+        status: "neu",
+        groesse: (foot === "vorne" ? visit.kleberGroesseVorne : visit.kleberGroesseHinten) || "",
+        seit: visit.kleberDatum || visit.date || "",
+      };
+    }
+    return { status: "keine", groesse: "", seit: "" };
+  }
+
+  // Scans visits (newest first) for the most recent known size/date for a foot.
+  function getLastKnownKleberFoot(visits, foot) {
+    for (const v of visits) {
+      const d = getKleberFootData(v, foot);
+      if (d.seit || d.groesse) return d;
+    }
+    return { status: "keine", groesse: "", seit: "" };
+  }
+
+  function updateKleberFootVisibility(foot) {
+    const status = document.getElementById(`vf-kleber-${foot}-status`).value;
+    const show = status !== "keine";
+    document.getElementById(`vf-kleber-${foot}-groesse-wrap`).hidden = !show;
+    document.getElementById(`vf-kleber-${foot}-seit-wrap`).hidden = !show;
+  }
+
+  KLEBER_FEET.forEach(foot => {
+    const sel = document.getElementById(`vf-kleber-${foot}-status`);
+    sel.addEventListener("change", () => {
+      updateKleberFootVisibility(foot);
+      if (sel.value === "neu") {
+        document.getElementById(`vf-kleber-${foot}-seit`).value = document.getElementById("vf-date").value;
+      }
+    });
+  });
+
+  function readKleberFoot(foot) {
+    const status = document.getElementById(`vf-kleber-${foot}-status`).value;
+    return {
+      status,
+      groesse: status !== "keine" ? document.getElementById(`vf-kleber-${foot}-groesse`).value.trim() : "",
+      seit: status !== "keine" ? document.getElementById(`vf-kleber-${foot}-seit`).value : "",
+    };
   }
 
   function openVisitForm(horseId, visitId) {
@@ -534,19 +602,20 @@
 
     document.getElementById("vf-cost").value = visit ? visit.cost || "" : "";
 
-    const kleberPositionSel = document.getElementById("vf-kleber-position");
-    kleberPositionSel.value = visit ? visit.kleberPosition || "keine" : "keine";
-    document.getElementById("vf-kleber-groesse-vorne").value = visit ? visit.kleberGroesseVorne || "" : "";
-    document.getElementById("vf-kleber-groesse-hinten").value = visit ? visit.kleberGroesseHinten || "" : "";
-    updateKleberGroesseVisibility();
-
-    let kleberDatum = visit ? visit.kleberDatum || "" : "";
-    if (!kleberDatum) {
-      const others = visit ? visits.filter(v => v.id !== visit.id) : visits;
-      const lastKnown = others.find(v => v.kleberDatum);
-      kleberDatum = lastKnown ? lastKnown.kleberDatum : "";
-    }
-    document.getElementById("vf-kleber-datum").value = kleberDatum;
+    const otherVisits = visit ? visits.filter(v => v.id !== visit.id) : visits;
+    KLEBER_FEET.forEach(foot => {
+      let data;
+      if (visit) {
+        data = getKleberFootData(visit, foot);
+      } else {
+        const lastKnown = getLastKnownKleberFoot(otherVisits, foot);
+        data = { status: "keine", groesse: lastKnown.groesse, seit: lastKnown.seit };
+      }
+      document.getElementById(`vf-kleber-${foot}-status`).value = data.status;
+      document.getElementById(`vf-kleber-${foot}-groesse`).value = data.groesse;
+      document.getElementById(`vf-kleber-${foot}-seit`).value = data.seit;
+      updateKleberFootVisibility(foot);
+    });
 
     buildHoofGrid(visit ? visit.hooves : emptyHooves(), prevVisit ? prevVisit.hooves : null);
 
@@ -555,13 +624,6 @@
     navigate("screen-visit-form", { title: visit ? "Termin bearbeiten" : "Neuer Termin", showBack: true });
   }
 
-  function updateKleberGroesseVisibility() {
-    const position = document.getElementById("vf-kleber-position").value;
-    document.getElementById("vf-kleber-groesse-vorne-wrap").hidden = !(position === "vorne" || position === "beide");
-    document.getElementById("vf-kleber-groesse-hinten-wrap").hidden = !(position === "hinten" || position === "beide");
-  }
-  document.getElementById("vf-kleber-position").addEventListener("change", updateKleberGroesseVisibility);
-
   visitForm.addEventListener("submit", e => {
     e.preventDefault();
     const h = getHorse(state.currentHorseId);
@@ -569,8 +631,8 @@
     const date = document.getElementById("vf-date").value;
     if (!date) return;
 
-    const kleberPosition = document.getElementById("vf-kleber-position").value;
-    const kleberDatum = kleberPosition !== "keine" ? date : document.getElementById("vf-kleber-datum").value;
+    const vorne = readKleberFoot("vorne");
+    const hinten = readKleberFoot("hinten");
 
     const payload = {
       date,
@@ -579,10 +641,12 @@
       nextdate: document.getElementById("vf-nextdate").value,
       cost: document.getElementById("vf-cost").value,
       hooves: readHoofGrid(),
-      kleberPosition,
-      kleberGroesseVorne: document.getElementById("vf-kleber-groesse-vorne").value,
-      kleberGroesseHinten: document.getElementById("vf-kleber-groesse-hinten").value,
-      kleberDatum,
+      kleberVorneStatus: vorne.status,
+      kleberVorneGroesse: vorne.groesse,
+      kleberVorneSeit: vorne.seit,
+      kleberHintenStatus: hinten.status,
+      kleberHintenGroesse: hinten.groesse,
+      kleberHintenSeit: hinten.seit,
     };
 
     if (state.currentVisitId) {
